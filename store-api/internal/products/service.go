@@ -59,3 +59,15 @@ func (s *Service) GetProductById(id string) (Productresponse, error) {
 	return prod, nil
 
 }
+
+func (s *Service) UpdateProduct(updateproduct AddProductsReq, id string) (string, error) {
+
+	id, err := s.repo.UpdateProduct(updateproduct, id)
+
+	if err != nil {
+		return "", err
+	}
+
+	return id, nil
+
+}

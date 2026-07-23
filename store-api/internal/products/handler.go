@@ -86,3 +86,39 @@ func (h *Handler) GetProductByIdHandler(w http.ResponseWriter, r *http.Request) 
 	json.NewEncoder(w).Encode(list)
 
 }
+
+func (h *Handler) UpdateProductHandler(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method != http.MethodPut {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	id := r.PathValue("id") // Extract path parameter
+	log.Println("product id:", id)
+
+	var updatereq AddProductsReq
+
+	err := json.NewDecoder(r.Body).Decode(&updatereq)
+
+	if err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	log.Println("za error:", updatereq)
+
+	updatedid, err := h.serv.UpdateProduct(updatereq, id)
+
+	if err != nil {
+		http.Error(w, "failed to update product", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{
+		"id":      updatedid,
+		"message": "product updated successfully",
+	})
+
+}

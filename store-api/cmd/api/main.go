@@ -32,6 +32,7 @@ func main() {
 	mux.HandleFunc("GET /products", handler.GetProductHandler)
 	mux.HandleFunc("POST /products", handler.AddProductHandler)
 	mux.HandleFunc("GET /products/{id}", handler.GetProductByIdHandler)
+	mux.HandleFunc("PUT /products/{id}", handler.UpdateProductHandler)
 
 	log.Printf("Server running on :%s", cfg.Port)
 

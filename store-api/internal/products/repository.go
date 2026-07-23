@@ -107,3 +107,23 @@ func (r *Repository) GetProductById(id string) (Productresponse, error) {
 
 	return prod, nil
 }
+
+func (r *Repository) UpdateProduct(updateproduct AddProductsReq, id string) (string, error) {
+
+	query := `
+		UPDATE products 
+		SET name = $1, description = $2, price = $3, stock_quantity = $4, category = $5, image_url = $6
+		WHERE id = $7
+		RETURNING id
+	`
+
+	err := r.db.QueryRow(query, updateproduct.Name, updateproduct.Description, updateproduct.Price,
+		updateproduct.StockQuantity, updateproduct.Category, updateproduct.ImageURL, id).Scan(&id)
+
+	if err != nil {
+		return "", err
+	}
+
+	return id, nil
+
+}
