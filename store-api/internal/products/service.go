@@ -60,14 +60,38 @@ func (s *Service) GetProductById(id string) (Productresponse, error) {
 
 }
 
-func (s *Service) UpdateProduct(updateproduct AddProductsReq, id string) (string, error) {
+func (s *Service) UpdateProduct(updateproduct AddProductsReq, id string) (Productresponse, error) {
 
-	id, err := s.repo.UpdateProduct(updateproduct, id)
+	updatedproduct, err := s.repo.UpdateProduct(updateproduct, id)
 
 	if err != nil {
-		return "", err
+		return Productresponse{}, err
 	}
 
-	return id, nil
+	return updatedproduct, nil
+
+}
+
+func (s *Service) Deleteproduct(id string) (int64, error) {
+
+	exists, err := s.repo.ProductIdExists(id)
+
+	if err != nil {
+		return 0, err
+	}
+
+	if exists == false {
+		log.Println("Product doesn't exist!")
+		return 0, err
+	} else {
+		log.Println("Product exists!")
+		deletedrows, err := s.repo.Deleteproduct(id)
+
+		if err != nil {
+			return 0, err
+		}
+		return deletedrows, nil
+
+	}
 
 }

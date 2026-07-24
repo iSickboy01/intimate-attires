@@ -108,22 +108,66 @@ func (r *Repository) GetProductById(id string) (Productresponse, error) {
 	return prod, nil
 }
 
-func (r *Repository) UpdateProduct(updateproduct AddProductsReq, id string) (string, error) {
+func (r *Repository) UpdateProduct(updateproduct AddProductsReq, id string) (Productresponse, error) {
 
 	query := `
 		UPDATE products 
 		SET name = $1, description = $2, price = $3, stock_quantity = $4, category = $5, image_url = $6
 		WHERE id = $7
-		RETURNING id
+		RETURNING id, name, description, price, stock_quantity, category, image_url
 	`
 
+	var updatedproduct Productresponse
+
 	err := r.db.QueryRow(query, updateproduct.Name, updateproduct.Description, updateproduct.Price,
-		updateproduct.StockQuantity, updateproduct.Category, updateproduct.ImageURL, id).Scan(&id)
+		updateproduct.StockQuantity, updateproduct.Category, updateproduct.ImageURL, id).Scan(&updatedproduct.ID, &updatedproduct.Name, &updatedproduct.Description, &updatedproduct.Price, &updatedproduct.StockQuantity, &updatedproduct.Category, &updatedproduct.ImageURL)
 
 	if err != nil {
-		return "", err
+		return Productresponse{}, err
 	}
 
-	return id, nil
+	return updatedproduct, nil
+
+}
+
+func (r *Repository) Deleteproduct(id string) (int64, error) {
+
+	query := `
+	DELETE FROM products 
+	WHERE id = $1
+	`
+
+	result, err := r.db.Exec(query, id)
+
+	if err != nil {
+		return 0, nil
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return 0, nil
+	}
+
+	return rows, nil
+
+}
+
+// returns true if product exists
+func (r *Repository) ProductIdExists(id string) (bool, error) {
+
+	query := `
+		SELECT COUNT(*) 
+		FROM products 
+		WHERE  id = $1
+	`
+	var count int
+
+	err := r.db.QueryRow(query, id).Scan(&count)
+
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
 
 }
