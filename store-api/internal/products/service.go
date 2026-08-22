@@ -52,11 +52,17 @@ func (s *Service) GetProductById(id string) (Productresponse, error) {
 
 	prod, err := s.repo.GetProductById(id)
 
-	if err != nil {
+	switch err {
+
+	case nil:
+		return prod, nil
+
+	case ErrProductNotFound:
+		return Productresponse{}, ErrProductNotFound
+
+	default:
 		return Productresponse{}, err
 	}
-
-	return prod, nil
 
 }
 

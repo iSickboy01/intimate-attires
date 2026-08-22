@@ -77,14 +77,20 @@ func (h *Handler) GetProductByIdHandler(w http.ResponseWriter, r *http.Request) 
 
 	list, err := h.serv.GetProductById(id)
 
-	if err != nil {
+	switch err {
+
+	case nil:
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(list)
+
+	case ErrProductNotFound:
+		http.Error(w, "Product does not exist!", http.StatusNotFound)
+		return
+
+	default:
 		http.Error(w, "failed to get products", http.StatusInternalServerError)
 		return
 	}
-
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(list)
-
 }
 
 func (h *Handler) UpdateProductHandler(w http.ResponseWriter, r *http.Request) {
@@ -138,6 +144,6 @@ func (h *Handler) DeleteProductHandler(w http.ResponseWriter, r *http.Request) {
 	if deletedproducts > 0 {
 		w.WriteHeader(http.StatusNoContent)
 	} else {
-		http.Error(w, "product doesn't exist!", http.StatusBadRequest)
+		http.Error(w, "product doesn't exist!", http.StatusNotFound)
 	}
 }

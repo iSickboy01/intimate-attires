@@ -101,11 +101,19 @@ func (r *Repository) GetProductById(id string) (Productresponse, error) {
 
 	err := r.db.QueryRow(query, id).Scan(&prod.ID, &prod.Name, &prod.Description, &prod.Price, &prod.StockQuantity, &prod.Category, &prod.ImageURL)
 
-	if err != nil {
+	switch err {
+
+	case nil:
+		return prod, nil
+
+	case sql.ErrNoRows:
+
+		return Productresponse{}, ErrProductNotFound
+
+	default:
 		return Productresponse{}, err
 	}
 
-	return prod, nil
 }
 
 func (r *Repository) UpdateProduct(updateproduct AddProductsReq, id string) (Productresponse, error) {
