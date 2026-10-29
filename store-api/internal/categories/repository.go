@@ -129,3 +129,27 @@ func (r *Repository) UpdateCategory(updatecategory CreateCategoriesReq, id strin
 	}
 
 }
+
+//check for duplicate category
+func (r *Repository) CategoryExistsById(updatecategory CreateCategoriesReq, id string) (bool, error) {
+
+	query :=
+		`SELECT EXISTS(
+		 SELECT 1
+		 FROM categories 
+		 WHERE name = $1 AND id != $2
+		)
+	`
+	var catexist bool
+	err := r.db.QueryRow(query, updatecategory.Name, id).Scan(&catexist)
+
+	switch err {
+
+	case nil:
+		return catexist, nil
+
+	default:
+		return false, err
+	}
+
+}

@@ -144,6 +144,14 @@ func (h *Handler) UpdateCategoryHandler(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 
+	case ErrEmptyCategoryName:
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+
+	case ErrDuplicateCategory:
+		http.Error(w, err.Error(), http.StatusConflict)
+		return
+
 	default:
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return

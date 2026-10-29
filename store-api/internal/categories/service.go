@@ -77,6 +77,16 @@ func (s *Service) UpdateCategory(updatecategory CreateCategoriesReq, id string) 
 		return CategoriesResponse{}, ErrEmptyCategoryName
 	}
 
+	exist, err := s.repo.CategoryExistsById(updatecategory, id)
+
+	if err != nil {
+		return CategoriesResponse{}, err
+	}
+
+	if exist {
+		return CategoriesResponse{}, ErrDuplicateCategory
+	}
+
 	cat, err := s.repo.UpdateCategory(updatecategory, id)
 
 	switch err {
