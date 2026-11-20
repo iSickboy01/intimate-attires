@@ -49,7 +49,7 @@ func (h *Handler) CreateCategoryHandler(w http.ResponseWriter, r *http.Request) 
 		}
 		return
 	}
-
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(createcatresp)
 
@@ -68,7 +68,7 @@ func (h *Handler) GetCategoryHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to get categories", http.StatusInternalServerError)
 		return
 	}
-
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(cats)
 
@@ -90,14 +90,15 @@ func (h *Handler) GetCategoryByIdHandler(w http.ResponseWriter, r *http.Request)
 
 	cat, err := h.serv.GetCategoryById(id)
 
-	switch err {
+	switch {
 
-	case nil:
+	case err == nil:
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(cat)
 		return
 
-	case ErrEmptyCategoryNotFound:
+	case errors.Is(err, ErrEmptyCategoryNotFound):
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 
@@ -133,25 +134,60 @@ func (h *Handler) UpdateCategoryHandler(w http.ResponseWriter, r *http.Request) 
 
 	updatedcat, err := h.serv.UpdateCategory(updatecat, id)
 
-	switch err {
+	switch {
 
-	case nil:
+	case err == nil:
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(updatedcat)
 		return
 
-	case ErrEmptyCategoryNotFound:
+	case errors.Is(err, ErrEmptyCategoryNotFound):
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 
-	case ErrEmptyCategoryName:
+	case errors.Is(err, ErrEmptyCategoryName):
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 
-	case ErrDuplicateCategory:
+	case errors.Is(err, ErrDuplicateCategory):
 		http.Error(w, err.Error(), http.StatusConflict)
 		return
 
+	default:
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+}
+
+func (h *Handler) DeleteCategoryHandler(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	id := r.PathValue("id")
+
+	if _, err := uuid.Parse(id); err != nil {
+		http.Error(w, "Invalid category id", http.StatusBadRequest)
+		return
+	}
+
+	_, err := h.serv.Deletecategory(id)
+
+	switch {
+	case err == nil:
+		w.WriteHeader(http.StatusNoContent)
+		return
+	case errors.Is(err, ErrEmptyCategoryNotFound):
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+
+	case errors.Is(err, ErrCategoryHasProducts):
+		http.Error(w, err.Error(), http.StatusConflict)
+		return
 	default:
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return

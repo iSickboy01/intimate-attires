@@ -28,22 +28,50 @@ func (r *Repository) CreateCategory(createcatreq CreateCategoriesReq) (Categorie
 	return response, nil
 }
 
-//check if category exists
+//check if category exists by name
 func (r *Repository) CategoryExists(createcatreq CreateCategoriesReq) (bool, error) {
 
 	query :=
-		`SELECT COUNT(*)
-	from categories
-	WHERE name = $1
+		`SELECT EXISTS(
+		SELECT 1
+		from categories
+		WHERE name = $1
+		)
 	`
-	var count int
+	var count bool
 	err := r.db.QueryRow(query, createcatreq.Name).Scan(&count)
 
-	if err != nil {
+	switch err {
+
+	case nil:
+		return count, nil
+
+	default:
 		return false, err
 	}
+}
 
-	return count > 0, nil
+//check if category ID exists
+func (r *Repository) CategoryIDExists(id string) (bool, error) {
+
+	query :=
+		`SELECT EXISTS(
+		SELECT 1
+		from categories
+		WHERE id = $1
+		)
+	`
+	var count bool
+	err := r.db.QueryRow(query, id).Scan(&count)
+
+	switch err {
+
+	case nil:
+		return count, nil
+
+	default:
+		return false, err
+	}
 }
 
 //get all category
@@ -130,8 +158,8 @@ func (r *Repository) UpdateCategory(updatecategory CreateCategoriesReq, id strin
 
 }
 
-//check for duplicate category
-func (r *Repository) CategoryExistsById(updatecategory CreateCategoriesReq, id string) (bool, error) {
+//check for duplicate category while excluding the category being updated
+func (r *Repository) CategoryExistsForUpdate(updatecategory CreateCategoriesReq, id string) (bool, error) {
 
 	query :=
 		`SELECT EXISTS(
@@ -151,5 +179,28 @@ func (r *Repository) CategoryExistsById(updatecategory CreateCategoriesReq, id s
 	default:
 		return false, err
 	}
+
+}
+
+// delete a categoryyyy
+func (r *Repository) Deletecategory(id string) (int64, error) {
+
+	query := `
+	DELETE FROM categories 
+	WHERE id = $1
+	`
+
+	result, err := r.db.Exec(query, id)
+
+	if err != nil {
+		return 0, err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+
+	return rows, nil
 
 }

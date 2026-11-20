@@ -3,17 +3,17 @@ package categories
 import "time"
 
 type Categories struct {
-	ID         string
-	Name       string
-	InsertedAt time.Time
-	UpdatedAt  time.Time
+	ID         string    `json:"id"`
+	Name       string    `json:"name"`
+	InsertedAt time.Time `json:"inserted_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
 type CreateCategoriesReq struct {
-	Name string
+	Name string `json:"name"`
 }
 
 type CategoriesResponse struct {
-	ID   string
-	Name string
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }

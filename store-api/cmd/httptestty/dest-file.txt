@@ -1,0 +1,4 @@
+Product image data:
+Learning Go HTTP clients.
+Understanding interfaces.
+Preparing to upload product images.

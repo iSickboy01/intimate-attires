@@ -38,20 +38,25 @@ func (r *Repository) AddProduct(addproduct AddProductsReq) (string, error) {
 func (r *Repository) ProductExists(addproduct AddProductsReq) (bool, error) {
 
 	query := `
-		SELECT COUNT(*) 
+		SELECT EXISTS(
+		SELECT 1
 		FROM products 
 		WHERE  name = $1
 		AND category_id = $2
+		) 
 	`
-	var count int
+	var count bool
 
 	err := r.db.QueryRow(query, addproduct.Name, addproduct.CategoryID).Scan(&count)
 
-	if err != nil {
+	switch err {
+
+	case nil:
+		return count, nil
+
+	default:
 		return false, err
 	}
-
-	return count > 0, nil
 
 }
 
@@ -164,18 +169,72 @@ func (r *Repository) Deleteproduct(id string) (int64, error) {
 func (r *Repository) ProductIdExists(id string) (bool, error) {
 
 	query := `
-		SELECT COUNT(*) 
+		SELECT EXISTS(
+		SELECT 1
 		FROM products 
 		WHERE  id = $1
+		)
+		
 	`
-	var count int
+	var count bool
 
 	err := r.db.QueryRow(query, id).Scan(&count)
 
-	if err != nil {
+	switch err {
+
+	case nil:
+		return count, nil
+
+	default:
 		return false, err
 	}
 
-	return count > 0, nil
+}
+
+// check for duplicate product while excluding the product being updated
+func (r *Repository) ProductExistsForUpdate(updateproduct AddProductsReq, id string) (bool, error) {
+
+	query :=
+		`SELECT EXISTS(
+		 SELECT 1
+		 FROM products 
+		 WHERE name = $1 AND category_id = $2 AND id != $3
+		)
+	`
+	var prodexist bool
+	err := r.db.QueryRow(query, updateproduct.Name, updateproduct.CategoryID, id).Scan(&prodexist)
+
+	switch err {
+
+	case nil:
+		return prodexist, nil
+
+	default:
+		return false, err
+	}
+
+}
+
+// check if a category id has at least one product
+func (r *Repository) CategoryHasProducts(categoryid string) (bool, error) {
+
+	query :=
+		`SELECT EXISTS(
+		 SELECT 1
+		 FROM products 
+		 WHERE category_id = $1
+		)
+	`
+	var cathasprod bool
+	err := r.db.QueryRow(query, categoryid).Scan(&cathasprod)
+
+	switch err {
+
+	case nil:
+		return cathasprod, nil
+
+	default:
+		return false, err
+	}
 
 }

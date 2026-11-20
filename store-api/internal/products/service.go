@@ -1,80 +1,96 @@
 package products
 
 import (
-	"log"
+	"github.com/incognito/store-api/internal/categories"
 )
 
 type Service struct {
-	repo *Repository
+	repo    *Repository
+	catrepo *categories.Repository
 }
 
-func NewService(repo *Repository) *Service {
-	return &Service{repo: repo}
+func NewService(repo *Repository, catrepo *categories.Repository) *Service {
+	return &Service{
+		repo:    repo,
+		catrepo: catrepo,
+	}
 }
 
 // check products by name & category
 func (s *Service) ProductCreate(product AddProductsReq) (string, error) {
 
+	catexists, err := s.catrepo.CategoryIDExists(product.CategoryID)
+
+	if err != nil {
+		return "", err
+	}
+
+	if !catexists {
+		return "", ErrCategoryNotFound
+
+	}
 	exists, err := s.repo.ProductExists(product)
 
 	if err != nil {
 		return "", err
 	}
 
-	if exists == true {
-		log.Println("Product already exists!")
-		return "product exists", err
-	} else {
-		id, err := s.repo.AddProduct(product)
-
-		if err != nil {
-			return "", err
-
-		}
-		return id, nil
+	if exists {
+		return "", ErrDuplicateProduct
 	}
+
+	return s.repo.AddProduct(product)
 
 }
 
 func (s *Service) GetProduct() ([]Productresponse, error) {
 
-	prods, err := s.repo.GetProducts()
-
-	if err != nil {
-		return nil, err
-	}
-
-	return prods, nil
+	return s.repo.GetProducts()
 
 }
 
 func (s *Service) GetProductById(id string) (Productresponse, error) {
 
-	prod, err := s.repo.GetProductById(id)
-
-	switch err {
-
-	case nil:
-		return prod, nil
-
-	case ErrProductNotFound:
-		return Productresponse{}, ErrProductNotFound
-
-	default:
-		return Productresponse{}, err
-	}
+	return s.repo.GetProductById(id)
 
 }
 
+//update tha productss
+
 func (s *Service) UpdateProduct(updateproduct AddProductsReq, id string) (Productresponse, error) {
 
-	updatedproduct, err := s.repo.UpdateProduct(updateproduct, id)
+	exists, err := s.repo.ProductIdExists(id)
 
 	if err != nil {
 		return Productresponse{}, err
 	}
 
-	return updatedproduct, nil
+	if !exists {
+		return Productresponse{}, ErrProductNotFound
+	}
+
+	catexists, err := s.catrepo.CategoryIDExists(updateproduct.CategoryID)
+
+	if err != nil {
+		return Productresponse{}, err
+	}
+
+	if !catexists {
+		return Productresponse{}, ErrCategoryNotFound
+
+	}
+
+	duplicateExist, err := s.repo.ProductExistsForUpdate(updateproduct, id)
+
+	if err != nil {
+		return Productresponse{}, err
+	}
+
+	if duplicateExist {
+		return Productresponse{}, ErrDuplicateProduct
+	}
+
+	return s.repo.UpdateProduct(updateproduct, id)
 
 }
 
@@ -86,18 +102,10 @@ func (s *Service) Deleteproduct(id string) (int64, error) {
 		return 0, err
 	}
 
-	if exists == false {
-		log.Println("Product doesn't exist!")
+	if !exists {
+
 		return 0, err
-	} else {
-		log.Println("Product exists!")
-		deletedrows, err := s.repo.Deleteproduct(id)
-
-		if err != nil {
-			return 0, err
-		}
-		return deletedrows, nil
-
 	}
+	return s.repo.Deleteproduct(id)
 
 }

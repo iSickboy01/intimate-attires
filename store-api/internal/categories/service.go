@@ -4,12 +4,20 @@ import (
 	"strings"
 )
 
-type Service struct {
-	repo *Repository
+type ProductChecker interface {
+	CategoryHasProducts(categoryid string) (bool, error)
 }
 
-func NewService(repo *Repository) *Service {
-	return &Service{repo: repo}
+type Service struct {
+	repo     *Repository
+	prodrepo ProductChecker
+}
+
+func NewService(repo *Repository, checker ProductChecker) *Service {
+	return &Service{
+		repo:     repo,
+		prodrepo: checker,
+	}
 }
 
 func (s *Service) CreateCategory(createcatreq CreateCategoriesReq) (CategoriesResponse, error) {
@@ -41,31 +49,13 @@ func (s *Service) CreateCategory(createcatreq CreateCategoriesReq) (CategoriesRe
 
 func (s *Service) GetCategory() ([]CategoriesResponse, error) {
 
-	cats, err := s.repo.GetCategory()
-
-	if err != nil {
-		return nil, err
-	}
-
-	return cats, nil
+	return s.repo.GetCategory()
 
 }
 
 func (s *Service) GetCategoryById(id string) (CategoriesResponse, error) {
 
-	cat, err := s.repo.GetCategoryById(id)
-
-	switch err {
-
-	case nil:
-		return cat, nil
-
-	case ErrEmptyCategoryNotFound:
-		return CategoriesResponse{}, ErrEmptyCategoryNotFound
-
-	default:
-		return CategoriesResponse{}, err
-	}
+	return s.repo.GetCategoryById(id)
 
 }
 
@@ -77,7 +67,7 @@ func (s *Service) UpdateCategory(updatecategory CreateCategoriesReq, id string) 
 		return CategoriesResponse{}, ErrEmptyCategoryName
 	}
 
-	exist, err := s.repo.CategoryExistsById(updatecategory, id)
+	exist, err := s.repo.CategoryExistsForUpdate(updatecategory, id)
 
 	if err != nil {
 		return CategoriesResponse{}, err
@@ -87,18 +77,31 @@ func (s *Service) UpdateCategory(updatecategory CreateCategoriesReq, id string) 
 		return CategoriesResponse{}, ErrDuplicateCategory
 	}
 
-	cat, err := s.repo.UpdateCategory(updatecategory, id)
+	return s.repo.UpdateCategory(updatecategory, id)
 
-	switch err {
+}
 
-	case nil:
-		return cat, nil
+func (s *Service) Deletecategory(id string) (int64, error) {
 
-	case ErrEmptyCategoryNotFound:
-		return CategoriesResponse{}, ErrEmptyCategoryNotFound
+	exists, err := s.repo.CategoryIDExists(id)
 
-	default:
-		return CategoriesResponse{}, err
+	if err != nil {
+		return 0, err
 	}
+
+	if !exists {
+		return 0, ErrEmptyCategoryNotFound
+	}
+
+	cathasprod, err := s.prodrepo.CategoryHasProducts(id)
+
+	if err != nil {
+		return 0, err
+	}
+
+	if cathasprod {
+		return 0, ErrCategoryHasProducts
+	}
+	return s.repo.Deletecategory(id)
 
 }

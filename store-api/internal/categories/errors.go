@@ -6,4 +6,5 @@ var (
 	ErrEmptyCategoryName     = errors.New("Category name must not be empty!")
 	ErrDuplicateCategory     = errors.New("Category already exists!")
 	ErrEmptyCategoryNotFound = errors.New("Category does not exist")
+	ErrCategoryHasProducts   = errors.New("Category still has product(s) attached")
 )

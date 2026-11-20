@@ -2,8 +2,11 @@ package products
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
+
+	"github.com/google/uuid"
 )
 
 type Handler struct {
@@ -35,15 +38,21 @@ func (h *Handler) AddProductHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := h.serv.ProductCreate(addreq)
 
 	if err != nil {
-		http.Error(w, "failed to create product", http.StatusInternalServerError)
+
+		if errors.Is(err, ErrDuplicateProduct) {
+			http.Error(w, err.Error(), http.StatusConflict)
+		} else if errors.Is(err, ErrCategoryNotFound) {
+			http.Error(w, err.Error(), http.StatusNotFound)
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 		return
 	}
-
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]string{
 		"id": id,
 	})
-
 }
 
 func (h *Handler) GetProductHandler(w http.ResponseWriter, r *http.Request) {
@@ -59,7 +68,7 @@ func (h *Handler) GetProductHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to get products", http.StatusInternalServerError)
 		return
 	}
-
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(list)
 
@@ -80,6 +89,7 @@ func (h *Handler) GetProductByIdHandler(w http.ResponseWriter, r *http.Request) 
 	switch err {
 
 	case nil:
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(list)
 
@@ -103,6 +113,12 @@ func (h *Handler) UpdateProductHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id") // Extract path parameter
 	log.Println("product id:", id)
 
+	//check product uuid before updating product
+	if _, err := uuid.Parse(id); err != nil {
+		http.Error(w, "Invalid product id", http.StatusBadRequest)
+		return
+	}
+
 	var updatereq AddProductsReq
 
 	err := json.NewDecoder(r.Body).Decode(&updatereq)
@@ -112,14 +128,29 @@ func (h *Handler) UpdateProductHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedprod, err := h.serv.UpdateProduct(updatereq, id)
-
-	if err != nil {
-		log.Println(err)
-		http.Error(w, "failed to update product", http.StatusInternalServerError)
+	//check category uuid before updating product
+	if _, err := uuid.Parse(updatereq.CategoryID); err != nil {
+		http.Error(w, "Invalid category id", http.StatusBadRequest)
 		return
 	}
 
+	updatedprod, err := h.serv.UpdateProduct(updatereq, id)
+
+	if err != nil {
+
+		if errors.Is(err, ErrDuplicateProduct) {
+			http.Error(w, err.Error(), http.StatusConflict)
+		} else if errors.Is(err, ErrCategoryNotFound) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		} else if errors.Is(err, ErrProductNotFound) {
+			http.Error(w, err.Error(), http.StatusNotFound)
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(updatedprod)
 

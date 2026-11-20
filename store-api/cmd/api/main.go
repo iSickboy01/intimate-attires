@@ -24,14 +24,16 @@ func main() {
 
 	defer db.Close()
 
-	//products
+	// repositories
 	repo := products.NewRepository(db)
-	serv := products.NewService(repo)
+	crepo := categories.NewRepository(db)
+
+	// product service and handler
+	serv := products.NewService(repo, crepo)
 	handler := products.NewHandler(serv)
 
-	//categories
-	crepo := categories.NewRepository(db)
-	cserv := categories.NewService(crepo)
+	// category service and handler
+	cserv := categories.NewService(crepo, repo)
 	chandler := categories.NewHandler(cserv)
 
 	mux := http.NewServeMux()
@@ -47,6 +49,7 @@ func main() {
 	mux.HandleFunc("GET /categories", chandler.GetCategoryHandler)
 	mux.HandleFunc("GET /categories/{id}", chandler.GetCategoryByIdHandler)
 	mux.HandleFunc("PUT /categories/{id}", chandler.UpdateCategoryHandler)
+	mux.HandleFunc("DELETE /categories/{id}", chandler.DeleteCategoryHandler)
 
 	log.Printf("Server running on :%s", cfg.Port)
 
